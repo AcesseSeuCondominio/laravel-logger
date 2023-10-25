@@ -19,7 +19,7 @@ Add private repository
 Require this package with composer
 
 ```shell
-composer require acesseseucondominio/laravel-logger -n
+composer require acesseseucondominio/laravel-logger:"dev-main" -n
 ```
 
 ### Laravel without auto-discovery:
