@@ -17,7 +17,6 @@ class JsonFormatter extends BaseJsonFormatter
     protected $application;
     protected $environment;
     protected $gitCommit;
-    protected $includeStacktraces = true;
     protected $extractContextKeys = [
         'exception',
         'code',
@@ -25,10 +24,6 @@ class JsonFormatter extends BaseJsonFormatter
         'erro_string',
         'action',
         'user_id',
-        'userable_type',
-        'userable_id',
-        'phone',
-        'staff',
         'duration',
         'query',
     ];
