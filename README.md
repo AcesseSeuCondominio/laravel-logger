@@ -64,6 +64,26 @@ return [
      * Ativar ou desativar a captura de dados de autenticação
      */
     'auth' => env('LOG_AUTH', true),
+    
+    /**
+     * Ativar ou desativar a inclusão de detalhes do usuário autenticado
+     * Útil para ambientes com restrições de LGPD/GDPR
+     */
+    'auth_details' => env('LOG_AUTH_DETAILS', true),
+    
+    /**
+     * Lista adicional de chaves sensíveis que serão ocultadas nos logs
+     */
+    'sensitive_keys' => [
+        // 'cpf',
+        // 'rg',
+        // 'cnpj',
+    ],
+    
+    /**
+     * Nível mínimo de log
+     */
+    'level' => env('LOG_LEVEL', 'debug'),
 ];
 ```
 
@@ -88,4 +108,51 @@ Campos adicionais do contexto são extraídos automaticamente quando presentes:
 - `user_id`: ID do usuário
 - `duration`: Duração da operação
 - `query`: Query SQL executada
+
+## Segurança e Proteção de Dados Sensíveis
+
+O logger inclui proteções para dados sensíveis:
+
+### Ofuscação automática
+
+As seguintes informações são automaticamente ofuscadas nos logs:
+
+- Senhas (`password`, `senha`)
+- Tokens de autenticação (`token`, `access_token`, `refresh_token`)
+- Chaves de API (`api_key`, `apikey`, `api-key`)
+- Credenciais (`secret`, `private_key`, `client_secret`, `credentials`)
+- Cabeçalhos de autorização (`authorization`)
+
+### Configuração de segurança adicional
+
+Para projetos que precisam atender a LGPD ou outras regulamentações de privacidade:
+
+1. **Desabilitar detalhes de autenticação**:
+   ```
+   LOG_AUTH_DETAILS=false
+   ```
+
+2. **Adicionar chaves sensíveis personalizadas**:
+   Adicione chaves específicas para seu projeto no arquivo de configuração:
+   ```php
+   'sensitive_keys' => [
+       'cpf',
+       'rg',
+       'cnpj',
+       'cartao',
+       // adicione outras chaves sensíveis específicas do seu projeto
+   ],
+   ```
+
+3. **Configurar nível mínimo de log**:
+   Em produção, recomenda-se usar níveis mais altos para reduzir volume e exposição:
+   ```
+   LOG_LEVEL=error
+   ```
+
+### Boas práticas
+
+1. Nunca registre dados sensíveis completos (mesmo ofuscados)
+2. Para contextos de depuração, use níveis detalhados apenas em ambientes de desenvolvimento
+3. Revise os logs regularmente para identificar possíveis vazamentos de dados
 

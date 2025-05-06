@@ -13,6 +13,20 @@ use Monolog\Logger;
 class LoggerServiceProvider extends ServiceProvider
 {
     const CONFIGURE_MONOLOG_DEPRECATED_VERSION = '5.6';
+    
+    /**
+     * Mapeamento de níveis de log do Laravel para Monolog
+     */
+    protected $logLevels = [
+        'debug' => Logger::DEBUG,
+        'info' => Logger::INFO,
+        'notice' => Logger::NOTICE,
+        'warning' => Logger::WARNING,
+        'error' => Logger::ERROR,
+        'critical' => Logger::CRITICAL,
+        'alert' => Logger::ALERT,
+        'emergency' => Logger::EMERGENCY,
+    ];
 
     /**
      * Bootstrap the application events.
@@ -59,7 +73,11 @@ class LoggerServiceProvider extends ServiceProvider
         $buildId = Config::get('log.build_id', '');
         $logPath = $this->app->storagePath() . '/logs/laravel-' . date('Y-m-d') . 
             ($buildId ? '-' . $buildId : '') . '.json';
-        $logLevel = Logger::DEBUG;
+            
+        // Obter o nível de log configurado
+        $configLevel = strtolower(Config::get('log.level', 'debug'));
+        $logLevel = $this->logLevels[$configLevel] ?? Logger::DEBUG;
+        
         $logStreamHandler = new StreamHandler($logPath, $logLevel);
 
         $webProcessor = new WebProcessor();

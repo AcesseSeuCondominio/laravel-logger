@@ -20,4 +20,27 @@ return [
      * Ativar ou desativar a captura de dados de autenticação
      */
     'auth' => env('LOG_AUTH', true),
+    
+    /**
+     * Ativar ou desativar a inclusão de detalhes do usuário autenticado
+     * Útil para ambientes com restrições de LGPD/GDPR
+     */
+    'auth_details' => env('LOG_AUTH_DETAILS', true),
+    
+    /**
+     * Lista adicional de chaves sensíveis que serão ocultadas nos logs
+     * Útil para ocultar informações específicas do seu projeto
+     */
+    'sensitive_keys' => [
+        // Exemplos:
+        // 'cpf',
+        // 'rg',
+        // 'cnpj',
+    ],
+    
+    /**
+     * Nível mínimo de log (debug, info, notice, warning, error, critical, alert, emergency)
+     * Padrão: debug (todos os logs)
+     */
+    'level' => env('LOG_LEVEL', 'debug'),
 ]; 

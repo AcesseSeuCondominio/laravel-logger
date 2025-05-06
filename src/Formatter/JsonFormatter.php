@@ -30,6 +30,26 @@ class JsonFormatter extends BaseJsonFormatter
         'duration',
         'query',
     ];
+    
+    /**
+     * Chaves sensíveis que serão ocultadas nos logs
+     */
+    protected $sensitiveKeys = [
+        'api_key',
+        'token',
+        'bearerToken',
+        'password',
+        'senha',
+        'secret',
+        'authorization',
+        'api-key',
+        'apikey',
+        'access_token',
+        'refresh_token',
+        'private_key',
+        'client_secret',
+        'credentials',
+    ];
 
     public function __construct(...$args)
     {
@@ -38,6 +58,11 @@ class JsonFormatter extends BaseJsonFormatter
         $this->environment = Config::get('app.env');
         $this->gitCommit = Config::get('log.git_commit');
         $this->auth = Config::get('log.auth') !== false;
+        
+        // Adicionar chaves sensíveis personalizadas
+        if (Config::has('log.sensitive_keys') && is_array(Config::get('log.sensitive_keys'))) {
+            $this->sensitiveKeys = array_merge($this->sensitiveKeys, Config::get('log.sensitive_keys'));
+        }
     }
 
     /**
@@ -72,6 +97,9 @@ class JsonFormatter extends BaseJsonFormatter
 
         if (! empty($input['context'])) {
             $context = $input['context'];
+            
+            // Remover dados sensíveis do contexto
+            $this->removeSensitiveData($context);
 
             foreach ($this->extractContextKeys as $key) {
                 if (isset($context[$key])) {
@@ -96,7 +124,9 @@ class JsonFormatter extends BaseJsonFormatter
         }
 
         if (! empty($input['extra'])) {
-            $record['extra'] = $input['extra'];
+            $extra = $input['extra'];
+            $this->removeSensitiveData($extra);
+            $record['extra'] = $extra;
         }
 
         return $this->replacePrivateKeys($this->toJson($this->normalize($record), true) . ($this->appendNewline ? "\n" : ''));
@@ -104,6 +134,11 @@ class JsonFormatter extends BaseJsonFormatter
 
     protected function fillAuth(&$record)
     {
+        // Se log.auth_details for false, não inclua detalhes de usuário
+        if (Config::get('log.auth_details') === false) {
+            return;
+        }
+        
         $auth = Auth::user();
 
         if ($auth) {
@@ -125,11 +160,50 @@ class JsonFormatter extends BaseJsonFormatter
         }
     }
 
+    /**
+     * Oculta valores de chaves sensíveis em uma string JSON
+     */
     private function replacePrivateKeys(string $stackTraceJson)
     {
-        $keys = ['api_key', 'token', 'bearerToken'];
-        return preg_replace_callback('/(' . implode('|', $keys) . ')=.{4,8}/', function($matches) {
-            return $matches[1] . '=' . str_repeat('*', 8);
+        $pattern = '/(' . implode('|', array_map('preg_quote', $this->sensitiveKeys)) . ')(=|":|:)([^,}\s]+|"[^"]+")/i';
+        
+        return preg_replace_callback($pattern, function($matches) {
+            $key = $matches[1];
+            $separator = $matches[2];
+            $value = $matches[3];
+            
+            // Se o valor estiver entre aspas, mantenha as aspas
+            if (substr($value, 0, 1) === '"' && substr($value, -1) === '"') {
+                return $key . $separator . '"********"';
+            }
+            
+            return $key . $separator . '********';
         }, $stackTraceJson);
+    }
+    
+    /**
+     * Remove ou oculta dados sensíveis de um array recursivamente
+     */
+    private function removeSensitiveData(&$data)
+    {
+        if (!is_array($data)) {
+            return;
+        }
+        
+        foreach ($data as $key => &$value) {
+            // Checa se a chave contém alguma das palavras sensíveis
+            $keyLower = strtolower($key);
+            foreach ($this->sensitiveKeys as $sensitiveKey) {
+                if (strpos($keyLower, strtolower($sensitiveKey)) !== false) {
+                    $data[$key] = '********';
+                    break;
+                }
+            }
+            
+            // Recursivamente verifica arrays aninhados
+            if (is_array($value)) {
+                $this->removeSensitiveData($value);
+            }
+        }
     }
 }
