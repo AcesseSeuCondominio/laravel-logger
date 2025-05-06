@@ -7,6 +7,7 @@ use Throwable;
 use Monolog\Formatter\JsonFormatter as BaseJsonFormatter;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Contracts\Foundation\Application;
 
 /**
  * Class JsonFormatter
@@ -132,6 +133,9 @@ class JsonFormatter extends BaseJsonFormatter
         return $this->replacePrivateKeys($this->toJson($this->normalize($record), true) . ($this->appendNewline ? "\n" : ''));
     }
 
+    /**
+     * Preenche informações de autenticação no registro de log
+     */
     protected function fillAuth(&$record)
     {
         // Se log.auth_details for false, não inclua detalhes de usuário
@@ -139,25 +143,55 @@ class JsonFormatter extends BaseJsonFormatter
             return;
         }
         
-        $auth = Auth::user();
-
-        if ($auth) {
-            if (! isset($record['user_id'])) {
-                $record['user_id'] = $auth->id;
-            }
-
-            if (! isset($record['userable_type'])) {
-                $record['userable_type'] = $auth->userable_type ?? null;
-            }
-
-            if (! isset($record['userable_id']) && isset($auth->userable)) {
-                $record['userable_id'] = $auth->userable->id;
-            }
-
-            if (! isset($record['staff'])) {
-                $record['staff'] = (int) (method_exists($auth, 'isAdmin') && $auth->isAdmin());
-            }
+        // Verifica se a aplicação já está inicializada e se Auth está disponível
+        if (!$this->isAuthAvailable()) {
+            return;
         }
+        
+        try {
+            $auth = Auth::user();
+            
+            if ($auth) {
+                if (! isset($record['user_id'])) {
+                    $record['user_id'] = $auth->id;
+                }
+
+                if (! isset($record['userable_type'])) {
+                    $record['userable_type'] = $auth->userable_type ?? null;
+                }
+
+                if (! isset($record['userable_id']) && isset($auth->userable)) {
+                    $record['userable_id'] = $auth->userable->id;
+                }
+
+                if (! isset($record['staff'])) {
+                    $record['staff'] = (int) (method_exists($auth, 'isAdmin') && $auth->isAdmin());
+                }
+            }
+        } catch (\Exception $e) {
+            // Ignora erros ao tentar acessar Auth
+        }
+    }
+    
+    /**
+     * Verifica se o Auth está disponível para uso
+     */
+    private function isAuthAvailable(): bool
+    {
+        // Verifica se o Auth está carregado e se o método user() está disponível
+        if (!class_exists('Illuminate\Support\Facades\Auth')) {
+            return false;
+        }
+        
+        // Verifica se estamos em console ou em uma requisição web
+        $app = app();
+        
+        // Não use Auth no console ou durante a inicialização
+        if ($app->runningInConsole() && !$app->runningUnitTests()) {
+            return false;
+        }
+        
+        return true;
     }
 
     /**

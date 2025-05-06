@@ -156,3 +156,35 @@ Para projetos que precisam atender a LGPD ou outras regulamentações de privaci
 2. Para contextos de depuração, use níveis detalhados apenas em ambientes de desenvolvimento
 3. Revise os logs regularmente para identificar possíveis vazamentos de dados
 
+## Resolução de Problemas
+
+### Erro "Call to undefined method Illuminate\Support\Facades\Auth::user()"
+
+Se você encontrar este erro durante a inicialização da aplicação ou em comandos artisan:
+
+```
+PHP Fatal error: Uncaught Error: Call to undefined method Illuminate\Support\Facades\Auth::user()
+```
+
+Existem duas soluções possíveis:
+
+1. **Desativar a coleta de dados de autenticação**:
+   
+   No seu arquivo `.env`, adicione:
+   ```
+   LOG_AUTH=false
+   ```
+
+2. **Para handlers de log personalizados**:
+   
+   Se você estiver implementando handlers de log personalizados, verifique se você está tentando acessar 
+   `Auth::user()` durante a inicialização da aplicação. Adicione uma verificação semelhante a:
+   
+   ```php
+   if (app()->runningInConsole() && !app()->runningUnitTests()) {
+       // Não tente acessar Auth::user() aqui
+   }
+   ```
+   
+   Ou envolva o código em um bloco try/catch para evitar erros fatais.
+

@@ -40,6 +40,18 @@ class LoggerServiceProvider extends ServiceProvider
             __DIR__ . '/../config/log.php' => config_path('log.php'),
         ], 'config');
         
+        // Aguarde até que a aplicação esteja completamente inicializada
+        // para configurar os handlers de log
+        $this->app->booted(function () {
+            $this->configureLogHandlers();
+        });
+    }
+    
+    /**
+     * Configura os handlers de log somente após a aplicação estar pronta
+     */
+    protected function configureLogHandlers()
+    {
         if (version_compare($this->app->version(), self::CONFIGURE_MONOLOG_DEPRECATED_VERSION) >= 0) {
             $logStreamHandler = $this->getLogStreamHandler();
             Log::getLogger()->pushHandler($logStreamHandler);
