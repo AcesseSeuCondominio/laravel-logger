@@ -6,17 +6,20 @@ use DateTimeZone;
 use Throwable;
 use Monolog\Formatter\JsonFormatter as BaseJsonFormatter;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 
 /**
  * Class JsonFormatter
  *
- * @package App\Components\Log\Formatter
+ * @package AcesseSeuCondominio\Logger\Formatter
  */
 class JsonFormatter extends BaseJsonFormatter
 {
     protected $application;
     protected $environment;
     protected $gitCommit;
+    protected $auth;
+    protected $appendNewline = true;
     protected $extractContextKeys = [
         'exception',
         'code',
@@ -31,10 +34,10 @@ class JsonFormatter extends BaseJsonFormatter
     public function __construct(...$args)
     {
         parent::__construct(...$args);
-        $this->application = config('log.application');
-        $this->environment = config('app.env');
-        $this->gitCommit = config('log.git_commit');
-        $this->auth = config('log.auth') !== false;
+        $this->application = Config::get('log.application');
+        $this->environment = Config::get('app.env');
+        $this->gitCommit = Config::get('log.git_commit');
+        $this->auth = Config::get('log.auth') !== false;
     }
 
     /**
@@ -109,7 +112,7 @@ class JsonFormatter extends BaseJsonFormatter
             }
 
             if (! isset($record['userable_type'])) {
-                $record['userable_type'] = $auth->userable_type;
+                $record['userable_type'] = $auth->userable_type ?? null;
             }
 
             if (! isset($record['userable_id']) && isset($auth->userable)) {

@@ -5,6 +5,7 @@ namespace AcesseSeuCondominio\Logger;
 use AcesseSeuCondominio\Logger\Formatter\JsonFormatter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Config;
 use Monolog\Processor\WebProcessor;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
@@ -20,16 +21,34 @@ class LoggerServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        if (version_compare(app()->version(), self::CONFIGURE_MONOLOG_DEPRECATED_VERSION) >= 0) {
+        // Publicação do arquivo de configuração
+        $this->publishes([
+            __DIR__ . '/../config/log.php' => config_path('log.php'),
+        ], 'config');
+        
+        if (version_compare($this->app->version(), self::CONFIGURE_MONOLOG_DEPRECATED_VERSION) >= 0) {
             $logStreamHandler = $this->getLogStreamHandler();
             Log::getLogger()->pushHandler($logStreamHandler);
             return;
         }
 
-        $this->app->configureMonologUsing(function ($monolog) {
-            $logStreamHandler = $this->getLogStreamHandler();
-            $monolog->pushHandler($logStreamHandler);
-        });
+        // Método obsoleto nas versões mais recentes do Laravel, mas mantido para compatibilidade
+        if (method_exists($this->app, 'configureMonologUsing')) {
+            $this->app->configureMonologUsing(function ($monolog) {
+                $logStreamHandler = $this->getLogStreamHandler();
+                $monolog->pushHandler($logStreamHandler);
+            });
+        }
+    }
+
+    /**
+     * Registra as configurações
+     *
+     * @return void
+     */
+    public function register()
+    {
+        $this->mergeConfigFrom(__DIR__ . '/../config/log.php', 'log');
     }
 
     /**
@@ -37,7 +56,9 @@ class LoggerServiceProvider extends ServiceProvider
      */
     public function getLogStreamHandler(): StreamHandler
     {
-        $logPath = $this->app->storagePath() . '/logs/laravel-' . date('Y-m-d') . '-' . config('log.build_id') . '.json';
+        $buildId = Config::get('log.build_id', '');
+        $logPath = $this->app->storagePath() . '/logs/laravel-' . date('Y-m-d') . 
+            ($buildId ? '-' . $buildId : '') . '.json';
         $logLevel = Logger::DEBUG;
         $logStreamHandler = new StreamHandler($logPath, $logLevel);
 
